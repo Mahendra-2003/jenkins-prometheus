@@ -3,7 +3,7 @@ pipeline {
 
     environment {
         RULES_REPO = 'https://github.com/Mahendra-2003/jenkins-prometheus.git'
-        RULES_FILE = 'oom.yaml'
+        RULES_FILE = test-rule-1.yaml'
     }
 
     stages {
