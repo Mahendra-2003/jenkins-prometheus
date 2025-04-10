@@ -7,15 +7,16 @@ pipeline {
     }
 
     stages {
-        stage('Clone Prometheus Rules Repo') {
-            steps {
-                sh '''
-                    rm -rf rules-repo
-                    git clone ${RULES_REPO} rules-repo
-                '''
-            }
+      stage('Clone Prometheus Rules Repo') {
+    steps {
+        withCredentials([string(credentialsId: 'GITHUB_TOKEN', variable: 'TOKEN')]) {
+            sh '''
+                rm -rf rules-repo
+                git clone https://${TOKEN}@github.com/Mahendra-2003/jenkins-prometheus.git rules-repo
+            '''
         }
-
+    }
+}
         stage('Generate Prometheus Rule') {
             steps {
                 script {
