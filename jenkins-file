@@ -7,33 +7,40 @@ pipeline {
     }
 
     stages {
-      stage('Clone Prometheus Rules Repo') {
-    steps {
-        withCredentials([string(credentialsId: 'GITHUB_TOKEN', variable: 'TOKEN')]) {
-            sh '''
-                rm -rf rules-repo
-                git clone https://${TOKEN}@github.com/Mahendra-2003/jenkins-prometheus.git rules-repo
-            '''
+        stage('Clone Prometheus Rules Repo') {
+            steps {
+                withCredentials([string(credentialsId: 'GITHUB_TOKEN', variable: 'TOKEN')]) {
+                    sh '''
+                        rm -rf rules-repo
+                        git clone https://$TOKEN@github.com/Mahendra-2003/jenkins-prometheus.git rules-repo
+                    '''
+                }
+            }
         }
-    }
-}
+
         stage('Generate Prometheus Rule') {
             steps {
                 script {
                     def prometheusRule = """
-                    groups:
-                      - name: JenkinsBuildAlerts
-                        rules:
-                          - alert: JenkinsPipelineFailed
-                            expr: jenkins_job_last_build_result{job="${env.JOB_NAME}"} == 2
-                            for: 1m
-                            labels:
-                              severity: warning
-                            annotations:
-                              summary: "Jenkins build failed for job ${env.JOB_NAME}"
-                              description: "Build failed in job '${env.JOB_NAME}' at ${env.BUILD_URL}"
+kind: prometheusRule
+metadata:
+  name: OOM
+  project: self-healing-engine
+spec:
+  groups:
+    - name: self-healing-engine.OOM
+      rules:
+        - alert: OOM for DM
+          expr: '{__name__=~"kube_pod_container_status_last_terminated_reason", reason="OOMKilled", namespace="dm-dev-int-gob"} > 0'
+          for: 5m
+          labels:
+            servicenow_ci_type: cmdb_ci_kubernetes_pod
+            servicenow_event_type: MEMORY_USAGE
+            servicenow_severity: "1"
+          annotations:
+            description: Triggers when any pod in dm-dev-int-gob goes into OOM
+            title: dm-dev-int-gob
                     """
-
                     writeFile file: "rules-repo/${RULES_FILE}", text: prometheusRule
                 }
             }
@@ -46,8 +53,30 @@ pipeline {
                         git config user.name "jenkins-bot"
                         git config user.email "jenkins-bot@example.com"
                         git add ${RULES_FILE}
-                        git commit -m "Add alert rule for ${JOB_NAME}"
+                        git commit -m "Add OOM alert rule for self-healing" || echo "No changes to commit"
                         git push origin main
+                    '''
+                }
+            }
+        }
+
+        stage('Deploy Rule to Argos') {
+            steps {
+                withCredentials([string(credentialsId: 'ARGOS_API_TOKEN', variable: 'ARGOS_TOKEN')]) {
+                    sh '''
+                        set -e
+                        response=$(curl -s -w "%{http_code}" -o result.txt -X POST https://argos.example.com/api/v1/rules \
+                            -H "Authorization: Bearer $ARGOS_TOKEN" \
+                            -H "Content-Type: application/yaml" \
+                            --data-binary @rules-repo/oom.yaml)
+
+                        if [ "$response" -ne 200 ]; then
+                            echo "Argos rule deployment failed:"
+                            cat result.txt
+                            exit 1
+                        else
+                            echo "Rule deployed successfully to Argos."
+                        fi
                     '''
                 }
             }
