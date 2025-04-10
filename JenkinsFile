@@ -2,8 +2,8 @@ pipeline {
     agent any
 
     environment {
-        RULES_REPO = 'https://github.com/Mahendra-2003/jenkins-prometheus'
-        RULES_FILE = 'custom-alerts/new_alert_rule.yaml'
+        RULES_REPO = 'git@github.com:Mahendra-2003/jenkins-prometheus.git'
+        RULES_FILE = 'oom.yaml'
     }
 
     stages {
