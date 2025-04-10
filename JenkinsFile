@@ -1,0 +1,55 @@
+pipeline {
+    agent any
+
+    environment {
+        RULES_REPO = 'https://github.com/Mahendra-2003/jenkins-prometheus'
+        RULES_FILE = 'custom-alerts/new_alert_rule.yaml'
+    }
+
+    stages {
+        stage('Clone Prometheus Rules Repo') {
+            steps {
+                sh '''
+                    rm -rf rules-repo
+                    git clone ${RULES_REPO} rules-repo
+                '''
+            }
+        }
+
+        stage('Generate Prometheus Rule') {
+            steps {
+                script {
+                    def prometheusRule = """
+                    groups:
+                      - name: JenkinsBuildAlerts
+                        rules:
+                          - alert: JenkinsPipelineFailed
+                            expr: jenkins_job_last_build_result{job="${env.JOB_NAME}"} == 2
+                            for: 1m
+                            labels:
+                              severity: warning
+                            annotations:
+                              summary: "Jenkins build failed for job ${env.JOB_NAME}"
+                              description: "Build failed in job '${env.JOB_NAME}' at ${env.BUILD_URL}"
+                    """
+
+                    writeFile file: "rules-repo/${RULES_FILE}", text: prometheusRule
+                }
+            }
+        }
+
+        stage('Commit and Push Rule') {
+            steps {
+                dir('rules-repo') {
+                    sh '''
+                        git config user.name "jenkins-bot"
+                        git config user.email "jenkins-bot@example.com"
+                        git add ${RULES_FILE}
+                        git commit -m "Add alert rule for ${JOB_NAME}"
+                        git push origin main
+                    '''
+                }
+            }
+        }
+    }
+}
