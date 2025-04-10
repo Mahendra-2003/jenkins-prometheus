@@ -1,0 +1,28 @@
+{
+    "kind": "prometheusRule",
+    "metadata": {
+        "name": "my-prometheus-rule",
+        "project": "self-healing-engine"
+    },
+    "spec": {
+        "groups": [
+            {
+                "name": "default",
+                "rules": [
+                    {
+                        "alert": "myFirstAlertRule",
+                        "expr": "up == 0",
+                        "for": "5m",
+                        "labels": {
+                            "labelkey": "labelvalue"
+                        },
+                        "annotations": {
+                            "description": "this is fancy description, more detailed than the title",
+                            "title": "this is fancy title"
+                        }
+                    }
+                ]
+            }
+        ]
+    }
+}

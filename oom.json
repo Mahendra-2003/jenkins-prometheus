@@ -1,0 +1,31 @@
+{
+  "kind": "prometheusRule",
+  "metadata": {
+    "name": "OOM",
+    "project": "self-healing-engine"
+  },
+  "spec": {
+    "groups": [
+      {
+        "name": "DM-Couchbase.OOM-Self-Healing",
+        "rules": [
+          {
+            "alert": "OOM for DM",
+            "expr": "{__name__=~\"kube_pod_container_status_last_terminated_reason\", reason=\"OOMKilled\", namespace=\"dm-dev-int-gob\"} > 0",
+            "for": "5m",
+            "labels": {
+              "servicenow_ci_type": "cmdb_ci_kubernetes_pod",
+              "servicenow_event_type": "MEMORY_USAGE",
+              "servicenow_severity": "1"
+            },
+            "annotations": {
+              "description": "Triggers when any pod in dm-dev-int-gob goes into OOM",
+              "title": "dm-dev-int-gob"
+            }
+          }
+        ]
+      }
+    ]
+  }
+}
+
